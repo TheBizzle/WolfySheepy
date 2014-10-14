@@ -3,6 +3,9 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="http://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script>
   </head>
   <body>
 
@@ -21003,9 +21006,112 @@ defaultShapes = {
 //# sourceMappingURL=session-lite.js.map
 ;
 
+var PenBundle  = tortoise_require('engine/plot/pen');
+var PlotOps    = tortoise_require('engine/plot/plotops');
+
+var HighchartsOps = (function(_super) {
+
+    __hasProp = {}.hasOwnProperty;
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends(HighchartsOps, _super);
+
+    HighchartsOps._chart              = void 0;
+    HighchartsOps._penNameToSeriesNum = void 0;
+
+    function HighchartsOps(elemID) {
+
+      var resize = function(xMin, xMax, yMin, yMax) {
+        this._chart.xAxis[0].setExtremes(xMin, xMax);
+        this._chart.yAxis[0].setExtremes(yMin, yMax);
+      };
+
+      var reset = function(plot) {
+        this._chart.destroy();
+        this._chart = new Highcharts.Chart({
+          chart: {
+            animation: false,
+            renderTo:  elemID,
+            zoomType:  "xy"
+          },
+          title: {
+            text: plot.name
+          },
+          series: []
+        });
+      };
+
+      var registerPen = function(pen) {
+        var num = this._chart.series.length;
+        this._chart.addSeries({
+          type:       this.modeToString(pen.getDisplayMode()),
+          color:      this.colorToRGBString(pen.getColor()),
+          name:       pen.name,
+          data:       [],
+          dataLabels: { enabled: false }
+        });
+        this._penNameToSeriesNum[pen.name] = num;
+      };
+
+      var resetPen = function(pen) {
+        var _this = this;
+        return function() {
+          var series = _this._chart.series[_this._penNameToSeriesNum[pen.name]]
+          if (typeof series !== "undefined" && series !== null)
+            series.setData([]);
+        };
+      };
+
+      var addPoint = function(pen) {
+        var _this = this;
+        return function(x, y) {
+          var color = _this.colorToRGBString(pen.getColor());
+          _this.penToSeries(pen).addPoint({ marker: { fillColor: color }, x: x, y: y });
+        };
+      };
+
+      var updatePenMode = function(pen) {
+        var _this = this;
+        return function(mode) {
+          var type = _this.modeToString(mode);
+          _this.penToSeries(pen).update({ type: type });
+        };
+      };
+
+      HighchartsOps.__super__.constructor.call(this, resize, reset, registerPen, resetPen, addPoint, updatePenMode);
+
+      this._chart              = new Highcharts.Chart({ chart: { renderTo: elemID } });
+      this._penNameToSeriesNum = {};
+
+    }
+
+    HighchartsOps.prototype.modeToString = function(mode) {
+
+      var Bar   = PenBundle.DisplayMode.Bar;
+      var Line  = PenBundle.DisplayMode.Line;
+      var Point = PenBundle.DisplayMode.Point;
+
+      if (mode === Bar)
+        return 'bar';
+      else if (mode === Line)
+        return 'line';
+      else if (mode === Point)
+        return 'scatter';
+      else
+        return 'line';
+
+    };
+
+    HighchartsOps.prototype.penToSeries = function(pen) {
+      return this._chart.series[this._penNameToSeriesNum[pen.name]]
+    };
+
+    return HighchartsOps;
+
+})(PlotOps);
+
 window.modelConfig = {
   plotOps: {
-    'populations': undefined
+    'populations': new HighchartsOps('chart')
   }
 };
 
