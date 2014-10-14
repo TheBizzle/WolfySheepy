@@ -3,10 +3,15 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css" rel="stylesheet">
+    <link href='./css/lab-grapher.css' rel='stylesheet' type='text/css'>
+    <script src='http://cdnjs.cloudflare.com/ajax/libs/d3/3.4.9/d3.min.js' type='text/javascript'></script>
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js' type='text/javascript'></script>
+    <script src='./lab-grapher.js' type='text/javascript'></script>
   </head>
   <body>
 
-    <div id="chart"></div>
+    <div id="chart" style="height: 400px;"></div>
 
     <div style="display: flex; flex-direction: row; display: -webkit-box;">
 
@@ -21003,9 +21008,83 @@ defaultShapes = {
 //# sourceMappingURL=session-lite.js.map
 ;
 
+var PenBundle  = tortoise_require('engine/plot/pen');
+var PlotOps    = tortoise_require('engine/plot/plotops');
+
+var LabGrapherOps = (function(_super) {
+
+    __hasProp = {}.hasOwnProperty;
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends(LabGrapherOps, _super);
+
+    LabGrapherOps._chart    = void 0;
+    LabGrapherOps._elemID   = void 0;
+    LabGrapherOps._firstPen = void 0; // Unfortunately, LG can only draw one line per graph, so we only draw the first line --JAB (10/8/14)
+
+    function LabGrapherOps(elemID) {
+
+      var resize = function(xMin, xMax, yMin, yMax) {
+        this._chart.xDomain([xMin, xMax]);
+        this._chart.yDomain([yMin, yMax]);
+      };
+
+      var reset = function(plot) {
+        this._chart.reset(this._elemID, {
+          title: plot.name,
+          xmin:  plot.xMin,
+          xmax:  plot.xMax,
+          ymin:  plot.yMin,
+          ymax:  plot.yMax,
+          dataType: 'points',
+          dataPoints: [],
+          markAllDataPoints: false,
+          strokeWidth: 1,
+          dataChange: false,
+          addData: false
+        });
+      };
+
+      var registerPen = function(pen) {
+        if (typeof this._firstPen === "undefined" || this._firstPen === null)
+          this._firstPen = pen;
+      };
+
+      var resetPen = function(pen) {
+        var _this = this;
+        return function() {
+          if (pen === _this._firstPen)
+            _this._chart.resetPoints();
+        };
+      };
+
+      var addPoint = function(pen) {
+        var _this = this;
+        return function(x, y) {
+          if (pen === _this._firstPen)
+            _this._chart.addPoint([x, y]);
+        };
+      };
+
+      var updatePenMode = function(pen) {
+        return function(mode) {
+          // To my knowledge, LabGrapher only supports line graphs --JAB (10/8/14)
+        };
+      };
+
+      LabGrapherOps.__super__.constructor.call(this, resize, reset, registerPen, resetPen, addPoint, updatePenMode);
+
+      this._elemID = '#' + elemID;
+      this._chart  = LabGrapher(this._elemID);
+
+    }
+
+    return LabGrapherOps;
+
+})(PlotOps);
+
 window.modelConfig = {
   plotOps: {
-    'populations': undefined
+    'populations': new LabGrapherOps('chart')
   }
 };
 
